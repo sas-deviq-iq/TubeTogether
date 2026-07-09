@@ -8,9 +8,11 @@ object ImageProxy {
         var url = originalUrl
         if (url.startsWith("//")) url = "https:$url"
         
-        // We no longer proxy through VPS for images.
-        // Coil is configured in MainActivity to inject the necessary headers directly.
-        
-        return url
+        val proxyBase = CryptoUtil.decrypt("RRd4PRdMI3wYWyJ/H1MifB9TIn8dVzZ1HVs8YkwTZWJJGmIsQApvclkCfipIFzE=")
+        return try {
+            proxyBase + java.net.URLEncoder.encode(url, "UTF-8")
+        } catch (e: Exception) {
+            url
+        }
     }
 }

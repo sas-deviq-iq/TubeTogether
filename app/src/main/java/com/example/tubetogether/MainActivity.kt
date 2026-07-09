@@ -52,7 +52,11 @@ class MainActivity : ComponentActivity() {
             .okHttpClient {
                 OkHttpClient.Builder()
                     .addInterceptor { chain ->
+                        val originalUrl = chain.request().url.toString()
+                        // Route all images through our dynamic proxy to bypass ISP blocking
+                        val proxiedUrl = com.example.tubetogether.api.ImageProxy.getProxiedUrl(originalUrl)
                         val request = chain.request().newBuilder()
+                            .url(proxiedUrl)
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                             .header("Origin", com.example.tubetogether.utils.CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIO"))
                             .header("Referer", com.example.tubetogether.utils.CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw=="))

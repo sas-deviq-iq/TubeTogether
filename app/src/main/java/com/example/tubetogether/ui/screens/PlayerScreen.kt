@@ -144,9 +144,10 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
                     val location = response.header("Location")
                     if (location != null) {
                         response.close()
-                        // Follow redirect directly without routing through VPS to prevent 4K buffering
+                        // Route redirect through VPS to ensure ISP block is bypassed
+                        val proxiedLocation = com.example.tubetogether.api.ImageProxy.getProxiedUrl(location)
                         val newRequest = request.newBuilder()
-                            .url(location)
+                            .url(proxiedLocation)
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                             .build()
                         response = chain.proceed(newRequest)
