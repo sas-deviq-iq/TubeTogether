@@ -7,7 +7,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // We are pointing directly to Shabakaty API to bypass the slow proxy:
+    // Main API endpoint configuration
     private val BASE_URL = CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw==")
 
     private val okHttpClient = OkHttpClient.Builder()
@@ -16,8 +16,8 @@ object RetrofitClient {
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                .header("Origin", "https://cinemana.shabakaty.com")
-                .header("Referer", "https://cinemana.shabakaty.com/")
+                .header("Origin", CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIO"))
+                .header("Referer", CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw=="))
                 .build()
             chain.proceed(request)
         }

@@ -47,15 +47,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         LocalDataManager.init(applicationContext)
         
-        // Setup Coil to hit Shabakaty CDNs directly to prevent slow image loading
+        // Setup Coil to hit CDNs directly to prevent slow image loading
         val imageLoader = ImageLoader.Builder(applicationContext)
             .okHttpClient {
                 OkHttpClient.Builder()
                     .addInterceptor { chain ->
                         val request = chain.request().newBuilder()
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                            .header("Origin", "https://cinemana.shabakaty.com")
-                            .header("Referer", "https://cinemana.shabakaty.com/")
+                            .header("Origin", com.example.tubetogether.utils.CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIO"))
+                            .header("Referer", com.example.tubetogether.utils.CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw=="))
                             .build()
                         chain.proceed(request)
                     }
