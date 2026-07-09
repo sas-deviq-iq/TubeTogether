@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     // Main API endpoint configuration
-    private val BASE_URL = CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw==")
+    private val BASE_URL = CryptoUtil.decrypt("RRd4PRdMI3wYWyJ/H1MifB9TIn8dVzZ1HVs8YkwTZWJOCmIoQAJiLAI=")
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
