@@ -30,39 +30,23 @@ object UpdateManager {
     
     suspend fun checkForUpdates(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
-            val url = URL("https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest")
+            val url = URL("https://raw.githubusercontent.com/$GITHUB_OWNER/$GITHUB_REPO/main/update.json")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
-            connection.setRequestProperty("User-Agent", "TubeTogether-Updater")
             
             if (connection.responseCode == 200) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
                 
-                var tagName = json.getString("tag_name")
-                if (tagName.startsWith("v", ignoreCase = true)) {
-                    tagName = tagName.substring(1)
-                }
+                val latestVersionStr = json.getString("version")
+                val releaseNotes = json.getString("releaseNotes")
+                val downloadUrl = json.getString("downloadUrl")
                 
-                val currentVersion = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+                val currentVersionStr = BuildConfig.VERSION_NAME ?: "1.0"
                 
                 // Compare versions (simple string compare for now, assuming standard semantic versioning)
-                if (isNewerVersion(currentVersion, tagName)) {
-                    val assets = json.getJSONArray("assets")
-                    var downloadUrl = ""
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(i)
-                        val name = asset.getString("name")
-                        if (name.endsWith(".apk")) {
-                            downloadUrl = asset.getString("browser_download_url")
-                            break
-                        }
-                    }
-                    
-                    if (downloadUrl.isNotEmpty()) {
-                        val body = json.optString("body", "تحديث جديد متاح!")
-                        return@withContext UpdateInfo(tagName, body, downloadUrl)
-                    }
+                if (isNewerVersion(currentVersionStr, latestVersionStr)) {
+                    return@withContext UpdateInfo(latestVersionStr, releaseNotes, downloadUrl)
                 }
             }
         } catch (e: Exception) {
