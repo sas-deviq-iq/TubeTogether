@@ -42,7 +42,7 @@ object UpdateManager {
                 val releaseNotes = json.getString("releaseNotes")
                 val downloadUrl = json.getString("downloadUrl")
                 
-                val currentVersionStr = BuildConfig.VERSION_NAME ?: "1.0"
+                val currentVersionStr = context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
                 
                 // Compare versions (simple string compare for now, assuming standard semantic versioning)
                 if (isNewerVersion(currentVersionStr, latestVersionStr)) {
