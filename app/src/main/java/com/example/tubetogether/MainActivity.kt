@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
                 val currentDestination = navBackStackEntry?.destination
                 val currentRoute = currentDestination?.route
                 
-                val showBottomNav = currentRoute == "home" || currentRoute == "search" || currentRoute == "favorites"
+                val showBottomNav = currentRoute == "home" || currentRoute == "search" || currentRoute == "favorites" || currentRoute == "about"
 
                 Scaffold(
                     bottomBar = {
@@ -181,6 +181,27 @@ class MainActivity : ComponentActivity() {
                                         indicatorColor = Color(0xFFE50914)
                                     )
                                 )
+                                NavigationBarItem(
+                                    icon = { Icon(androidx.compose.material.icons.Icons.Default.Info, contentDescription = "About") },
+                                    label = { Text("حول") },
+                                    selected = currentRoute == "about",
+                                    onClick = {
+                                        navController.navigate("about") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color.White,
+                                        selectedTextColor = Color.White,
+                                        unselectedIconColor = Color.Gray,
+                                        unselectedTextColor = Color.Gray,
+                                        indicatorColor = Color(0xFFE50914)
+                                    )
+                                )
                             }
                         }
                     }
@@ -212,6 +233,9 @@ class MainActivity : ComponentActivity() {
                                 FavoritesScreen(onVideoClick = { videoId ->
                                     navController.navigate("details/$videoId")
                                 })
+                            }
+                            composable("about") {
+                                com.example.tubetogether.ui.screens.AboutScreen()
                             }
                             composable("categoryList") {
                                 CategoryListScreen(
