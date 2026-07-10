@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
-  "releaseNotes": "🛡️ **Critical Update (v1.1.1):**\n- Added **Anti-Failure System** (Fallback Interceptor)\n- App now works smoothly even if the main proxy server goes offline (Auto-switches to direct Shabakaty servers for supported networks).",
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.1.1/TubeTogether-v1.1.1.apk"
+  "version": "1.1.2",
+  "releaseNotes": "🛡️ **Critical Update (v1.1.2):**\n- Fixed an issue where the proxy fallback was sending duplicate API paths (api/android/api/android/) resulting in empty screens.\n- Seamless direct connection to Shabakaty is now fully operational when the proxy is offline.",
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.1.2/TubeTogether-v1.1.2.apk"
 }

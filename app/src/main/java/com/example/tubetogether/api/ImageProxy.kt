@@ -34,7 +34,7 @@ object ImageProxy {
         
         // Retrofit API proxy URLs
         val proxyCinemanaBase = CryptoUtil.decrypt("RRd4PRdMI3wYWyJ/H1MifB9TIn8dVzZ1HVs8YkwTZWJOCmIoQAJiLAI=")
-        val directCinemanaBase = CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIyxdCiMsQwd+IkQHIw==")
+        val directCinemanaBase = CryptoUtil.decrypt("RRd4PV5ZI2JOCmIoQAJiLAMQZCxPAmcsWRoiLkIOIw==")
         
         if (proxiedUrl.startsWith(proxyCinemanaBase)) {
             return proxiedUrl.replaceFirst(proxyCinemanaBase, directCinemanaBase)
