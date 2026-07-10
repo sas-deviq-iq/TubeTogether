@@ -21,6 +21,7 @@ object RetrofitClient {
                 .build()
             chain.proceed(request)
         }
+        .addInterceptor(FallbackInterceptor())
         .build()
 
     val api: TubeApi by lazy {

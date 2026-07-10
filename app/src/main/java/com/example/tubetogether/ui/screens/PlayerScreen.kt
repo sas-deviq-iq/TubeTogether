@@ -158,6 +158,7 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
                 }
                 response
             }
+            .addInterceptor(com.example.tubetogether.api.FallbackInterceptor())
             .build()
             
         val dataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)

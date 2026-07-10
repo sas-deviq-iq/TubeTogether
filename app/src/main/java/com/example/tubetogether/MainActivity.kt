@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                             .build()
                         chain.proceed(request)
                     }
+                    .addInterceptor(com.example.tubetogether.api.FallbackInterceptor())
                     .build()
             }
             .build()
