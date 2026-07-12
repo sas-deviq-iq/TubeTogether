@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Sensitive credentials - never commit
+server_credentials.txt
+upload_release*.js

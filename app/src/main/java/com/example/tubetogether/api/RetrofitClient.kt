@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
     // Main API endpoint configuration
-    private val BASE_URL = CryptoUtil.decrypt("RRd4PRdMI3wYWyJ/H1MifB9TIn8dVzZ1HVs8YkwTZWJOCmIoQAJiLAI=")
+    private val BASE_URL = "http://158.220.120.204:8080/api/cinemana/"
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -21,6 +21,7 @@ object RetrofitClient {
                 .build()
             chain.proceed(request)
         }
+        .addInterceptor(SecureNetworkInterceptor())
         .addInterceptor(FallbackInterceptor())
         .build()
 

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -33,6 +34,7 @@ import com.example.tubetogether.ui.screens.DetailsScreen
 import com.example.tubetogether.ui.screens.FavoritesScreen
 import com.example.tubetogether.ui.screens.HomeScreen
 import com.example.tubetogether.ui.screens.PlayerScreen
+import com.example.tubetogether.ui.screens.ProfileScreen
 import com.example.tubetogether.ui.screens.SearchScreen
 import com.example.tubetogether.ui.theme.TubetogetherTheme
 import com.example.tubetogether.data.LocalDataManager
@@ -110,7 +112,7 @@ class MainActivity : ComponentActivity() {
                 val currentDestination = navBackStackEntry?.destination
                 val currentRoute = currentDestination?.route
                 
-                val showBottomNav = currentRoute == "home" || currentRoute == "search" || currentRoute == "favorites" || currentRoute == "about"
+                val showBottomNav = currentRoute == "home" || currentRoute == "search" || currentRoute == "favorites" || currentRoute == "profile" || currentRoute == "about"
 
                 Scaffold(
                     bottomBar = {
@@ -168,6 +170,27 @@ class MainActivity : ComponentActivity() {
                                     selected = currentRoute == "favorites",
                                     onClick = {
                                         navController.navigate("favorites") {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = Color.White,
+                                        selectedTextColor = Color.White,
+                                        unselectedIconColor = Color.Gray,
+                                        unselectedTextColor = Color.Gray,
+                                        indicatorColor = Color(0xFFE50914)
+                                    )
+                                )
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                                    label = { Text("حسابي") },
+                                    selected = currentRoute == "profile",
+                                    onClick = {
+                                        navController.navigate("profile") {
                                             popUpTo(navController.graph.findStartDestination().id) {
                                                 saveState = true
                                             }
@@ -259,6 +282,13 @@ class MainActivity : ComponentActivity() {
                             composable("favorites") {
                                 FavoritesScreen(onVideoClick = { videoId ->
                                     navController.navigate("details/$videoId")
+                                })
+                            }
+                            composable("profile") {
+                                ProfileScreen(onLogout = {
+                                    navController.navigate("auth") {
+                                        popUpTo(navController.graph.id) { inclusive = true }
+                                    }
                                 })
                             }
                             composable("about") {

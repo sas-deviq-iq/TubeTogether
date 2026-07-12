@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -31,9 +32,20 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.tubetogether.R
-
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
+import com.example.tubetogether.R
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 enum class AuthMode { LOGIN, SIGNUP, FORGOT, FORGOT_SENT }
 
@@ -257,11 +269,41 @@ fun AuthScreen(
                                 HorizontalDivider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.08f))
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Google Button
+                            val context = LocalContext.current
+                            val coroutineScope = rememberCoroutineScope()
+                            
+                            val googleSignInLauncher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.StartActivityForResult()
+                            ) { result ->
+                                if (result.resultCode == Activity.RESULT_OK) {
+                                    val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                                    try {
+                                        val account = task.getResult(ApiException::class.java)
+                                        val idToken = account?.idToken
+                                        if (idToken != null) {
+                                            viewModel.googleSignIn(context, idToken, onLoginSuccess)
+                                        } else {
+                                            android.widget.Toast.makeText(context, "لم يتم العثور على التوكن من جوجل", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    } catch (e: ApiException) {
+                                        android.widget.Toast.makeText(context, "فشل تسجيل الدخول: ${e.statusCode}", android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                } else {
+                                    android.widget.Toast.makeText(context, "تم إلغاء تسجيل الدخول", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            
                             OutlinedButton(
-                                onClick = onLoginSuccess,
+                                onClick = {
+                                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestIdToken("857976548779-m82ksachjgm7leko8q51uts7k2c24dhn.apps.googleusercontent.com")
+                                        .requestEmail()
+                                        .build()
+                                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                                    googleSignInClient.signOut().addOnCompleteListener {
+                                        googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                                    }
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(52.dp),

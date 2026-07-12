@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.tubetogether"
         minSdk = 24
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.3.3"
+        versionCode = 10
+        versionName = "1.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

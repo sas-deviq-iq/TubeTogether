@@ -1,6 +1,6 @@
 {
-  "version": "1.3.3",
-  "versionCode": 9,
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.3/app-debug.apk",
-  "releaseNotes": "- إصلاح نهائي لمشكلة التحديث المستمر ومشاكل الاتصال بالسيرفر."
+  "version": "1.3.4",
+  "versionCode": 10,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.4/app-debug.apk",
+  "releaseNotes": "- إضافة قسم \"حسابي\" (الملف الشخصي) لعرض وتعديل بياناتك.\n- إصلاح مشكلة فشل حفظ البيانات في خطوة إكمال الملف الشخصي."
 }

@@ -54,7 +54,7 @@ function encryptAES(text) {
 }
 
 // ==========================================
-// 1. إعداد قاعدة البيانات (SQLite)
+// 1. إعداد قاعدة البيانات و مسارات المصادقة
 // ==========================================
 const db = new sqlite3.Database('./users.db', (err) => {
     if (err) console.error('Error opening database', err);
@@ -69,8 +69,22 @@ db.serialize(() => {
         password TEXT,
         googleId TEXT,
         avatar TEXT,
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        username TEXT UNIQUE,
+        dob TEXT,
+        country TEXT,
+        profile_complete BOOLEAN DEFAULT 0
     )`);
+    
+    // Add columns safely if they don't exist
+    // NOTE: SQLite forbids UNIQUE on ALTER TABLE ADD COLUMN (it fails silently here
+    // since errors are ignored) - add the column plain, then enforce uniqueness via index.
+    try {
+        db.run("ALTER TABLE users ADD COLUMN username TEXT", () => {});
+        db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)", () => {});
+        db.run("ALTER TABLE users ADD COLUMN dob TEXT", () => {});
+        db.run("ALTER TABLE users ADD COLUMN country TEXT", () => {});
+        db.run("ALTER TABLE users ADD COLUMN profile_complete BOOLEAN DEFAULT 0", () => {});
+    } catch(e) {}
 });
 
 // ==========================================
@@ -86,13 +100,13 @@ app.post('/api/auth/register', async (req, res) => {
 
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        db.run(`INSERT INTO users (name, email, password) VALUES (?, ?, ?)`, [name, email, hashedPassword], function(err) {
+        db.run(`INSERT INTO users (name, email, password, profile_complete) VALUES (?, ?, ?, 0)`, [name, email, hashedPassword], function(err) {
             if (err) {
                 if (err.message.includes('UNIQUE')) return res.status(400).json({ error: "البريد الإلكتروني مسجل مسبقاً" });
                 return res.status(500).json({ error: err.message });
             }
             const token = jwt.sign({ id: this.lastID, email, name }, JWT_SECRET, { expiresIn: '30d' });
-            res.json({ token, user: { id: this.lastID, name, email } });
+            res.json({ token, user: { id: this.lastID, name, email, profile_complete: 0 } });
         });
     } catch (e) {
         res.status(500).json({ error: "حدث خطأ داخلي" });
@@ -108,10 +122,10 @@ app.post('/api/auth/login', (req, res) => {
         if (!user || !user.password) return res.status(400).json({ error: "البريد أو كلمة المرور غير صحيحة" });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ error: "البريد أو كلمة المرور غير صحيحة" });
+        if (!isMatch) return res.status(400).json({ error: "الإيميل أو كلمة المرور غير صحيحة" });
 
         const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar } });
+        res.json({ token, user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, profile_complete: user.profile_complete || 0 } });
     });
 });
 
@@ -131,18 +145,58 @@ app.post('/api/auth/google', async (req, res) => {
             if (user) {
                 db.run(`UPDATE users SET googleId = ?, avatar = ? WHERE id = ?`, [googleId, avatar, user.id]);
                 const token = jwt.sign({ id: user.id, email, name }, JWT_SECRET, { expiresIn: '30d' });
-                return res.json({ token, user: { id: user.id, name, email, avatar } });
+                return res.json({ token, user: { id: user.id, name: user.name || name, email, avatar, profile_complete: user.profile_complete || 0 } });
             } else {
-                db.run(`INSERT INTO users (name, email, googleId, avatar) VALUES (?, ?, ?, ?)`, [name, email, googleId, avatar], function(err) {
+                db.run(`INSERT INTO users (name, email, googleId, avatar, profile_complete) VALUES (?, ?, ?, ?, 0)`, [name, email, googleId, avatar], function(err) {
                     if (err) return res.status(500).json({ error: err.message });
                     const token = jwt.sign({ id: this.lastID, email, name }, JWT_SECRET, { expiresIn: '30d' });
-                    res.json({ token, user: { id: this.lastID, name, email, avatar } });
+                    res.json({ token, user: { id: this.lastID, name, email, avatar, profile_complete: 0 } });
                 });
             }
         });
     } catch (e) {
-        res.status(401).json({ error: "فشل التحقق من حساب جوجل", details: e.message });
+        res.status(401).json({ error: "فشل التحقق من توكن جوجل", details: e.message });
     }
+});
+
+app.post('/api/auth/complete-profile', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+    
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(401).json({ error: 'Invalid or expired token.' });
+        
+        const { name, username, dob, country } = req.body;
+        if (!name || !username || !dob || !country) {
+            return res.status(400).json({ error: "يرجى تعبئة جميع الحقول" });
+        }
+        
+        db.run(`UPDATE users SET name = ?, username = ?, dob = ?, country = ?, profile_complete = 1 WHERE id = ?`, 
+        [name, username, dob, country, decoded.id], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE')) return res.status(400).json({ error: "اسم المستخدم هذا محجوز مسبقاً، اختر اسماً آخر." });
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ success: true, profile_complete: 1 });
+        });
+    });
+});
+
+app.get('/api/auth/me', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: "Unauthorized" });
+
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(401).json({ error: 'Invalid or expired token.' });
+
+        db.get(`SELECT id, name, email, username, avatar, dob, country, profile_complete FROM users WHERE id = ?`, [decoded.id], (err, user) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (!user) return res.status(404).json({ error: 'User not found' });
+            res.json(user);
+        });
+    });
 });
 
 // ==========================================

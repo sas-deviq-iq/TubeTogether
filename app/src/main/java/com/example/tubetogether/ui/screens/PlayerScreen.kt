@@ -137,8 +137,12 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
             .followRedirects(false)
             .followSslRedirects(false)
             .addInterceptor { chain ->
-                val request = chain.request()
-                var response = chain.proceed(request)
+                val requestBuilder = chain.request().newBuilder()
+                val token = com.example.tubetogether.auth.AuthManager.getToken()
+                if (token != null) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+                var response = chain.proceed(requestBuilder.build())
                 var followCount = 0
                 while (response.isRedirect && followCount < 20) {
                     val location = response.header("Location")
@@ -146,11 +150,13 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
                         response.close()
                         // Route redirect through VPS to ensure ISP block is bypassed
                         val proxiedLocation = com.example.tubetogether.api.ImageProxy.getProxiedUrl(location)
-                        val newRequest = request.newBuilder()
-                            .url(proxiedLocation)
-                            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                            .build()
-                        response = chain.proceed(newRequest)
+                            val newRequestBuilder = chain.request().newBuilder()
+                                .url(proxiedLocation)
+                                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                            if (token != null) {
+                                newRequestBuilder.header("Authorization", "Bearer $token")
+                            }
+                            response = chain.proceed(newRequestBuilder.build())
                         followCount++
                     } else {
                         break
@@ -161,9 +167,9 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
             .addInterceptor(com.example.tubetogether.api.FallbackInterceptor())
             .build()
             
-        val dataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
+        val actualDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(dataSourceFactory)
+            .setDataSourceFactory(actualDataSourceFactory)
             
         // Optimized buffer for 4K playback: Large enough to avoid stuttering, but small enough to start quickly
         val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
