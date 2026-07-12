@@ -1,6 +1,6 @@
 {
-  "version": "1.3.4",
-  "versionCode": 10,
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.4/app-debug.apk",
-  "releaseNotes": "- إضافة قسم \"حسابي\" (الملف الشخصي) لعرض وتعديل بياناتك.\n- إصلاح مشكلة فشل حفظ البيانات في خطوة إكمال الملف الشخصي."
+  "version": "1.4.0",
+  "versionCode": 11,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.4.0/app-debug.apk",
+  "releaseNotes": "- تغيير كامل لمصدر الأفلام والمسلسلات إلى TMDB (بيانات أدق وأسرع، ويحل مشكلة توقف تحميل الرئيسية).\n- مشغل فيديو جديد مع دعم استكمال المشاهدة من حيث توقفت."
 }

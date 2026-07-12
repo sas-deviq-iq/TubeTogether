@@ -9,7 +9,11 @@ object ImageProxy {
         if (originalUrl == null) return ""
         var url = originalUrl
         if (url.startsWith("//")) url = "https:$url"
-        
+
+        // TMDB's CDN is globally available (not ISP-blocked like shabakaty), and the
+        // existing proxy routes are hardwired to shabakaty targets - so serve it directly.
+        if (url.contains("image.tmdb.org")) return url
+
         val proxyBase = CryptoUtil.decrypt("RRd4PRdMI3wYWyJ/H1MifB9TIn8dVzZ1HVs8YkwTZWJJGmIsQApvclkCfipIFzE=")
         // Prevent double proxying
         if (url.startsWith(proxyBase)) {

@@ -12,46 +12,16 @@ npm install sqlite3 bcrypt jsonwebtoken google-auth-library body-parser
 echo "جاري كتابة كود السيرفر المحدث..."
 cat << 'EOF' > server.js
 const express = require('express');
-const { createProxyMiddleware, responseInterceptor } = require('http-proxy-middleware');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-
-// ==========================================
-// 0. إعدادات التشفير (AES)
-// ==========================================
-const AES_KEY = "TubeTogetherSecureSecretKey32Bit";
-const AES_IV = "1234567890123456";
-
-function decryptAES(base64Str) {
-    try {
-        const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(AES_KEY), Buffer.from(AES_IV));
-        let decrypted = decipher.update(base64Str, 'base64', 'utf8');
-        decrypted += decipher.final('utf8');
-        return decrypted;
-    } catch (e) {
-        return null;
-    }
-}
-
-function encryptAES(text) {
-    try {
-        const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(AES_KEY), Buffer.from(AES_IV));
-        let encrypted = cipher.update(text, 'utf8', 'base64');
-        encrypted += cipher.final('base64');
-        return encrypted;
-    } catch (e) {
-        return null;
-    }
-}
 
 // ==========================================
 // 1. إعداد قاعدة البيانات و مسارات المصادقة
@@ -221,70 +191,157 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// 4. البروكسي المشفر (Secure API)
+// 4. مصدر بيانات المحتوى (TMDB)
 // ==========================================
-app.use('/api/secure', createProxyMiddleware({
-    target: 'https://cinemana.shabakaty.com',
-    changeOrigin: true,
-    selfHandleResponse: true,
-    pathRewrite: async function(path, req) {
-        const encryptedData = req.query.data;
-        if (encryptedData) {
-            const decryptedPath = decryptAES(encryptedData);
-            if (decryptedPath) {
-                return '/' + decryptedPath;
-            }
-        }
-        return path;
-    },
-    onProxyRes: responseInterceptor(async (responseBuffer, proxyRes, req, res) => {
-        const responseText = responseBuffer.toString('utf8');
-        const encryptedResponse = encryptAES(responseText);
-        res.setHeader('Content-Type', 'text/plain');
-        return encryptedResponse;
-    }),
-    onProxyReq: (proxyReq, req, res) => {
-        proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-        proxyReq.setHeader('Origin', 'https://cinemana.shabakaty.com');
-        proxyReq.setHeader('Referer', 'https://cinemana.shabakaty.com/');
-    },
-    onError: (err, req, res) => {
-        res.status(500).send("Proxy Error");
+// المفتاح يُقرأ من ملف محلي غير مرفوع لـ git أبداً (secrets.json بجانب هذا الملف).
+let TMDB_API_KEY = '';
+try {
+    TMDB_API_KEY = require('./secrets.json').tmdbApiKey || '';
+} catch (e) {
+    console.warn('secrets.json غير موجود - واجهة محتوى TMDB لن تعمل حتى يُضاف المفتاح.');
+}
+
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_IMG_BASE = 'https://image.tmdb.org/t/p';
+
+async function tmdbGet(path, params = {}) {
+    const url = new URL(TMDB_BASE + path);
+    url.searchParams.set('api_key', TMDB_API_KEY);
+    url.searchParams.set('language', 'ar');
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`TMDB ${path} failed: ${response.status}`);
+    return response.json();
+}
+
+function tmdbImg(path, size) {
+    return path ? `${TMDB_IMG_BASE}/${size}${path}` : null;
+}
+
+function mapMovie(m) {
+    return {
+        nb: `movie:${m.id}`, id: `movie:${m.id}`,
+        en_title: m.title, ar_title: m.title, title: m.title,
+        year: (m.release_date || '').slice(0, 4) || null,
+        kind: "1",
+        imgMediumThumbObjUrl: tmdbImg(m.poster_path, 'w342'),
+        imgObjUrl: tmdbImg(m.poster_path, 'w780'),
+        ar_content: m.overview, en_content: m.overview,
+        stars: m.vote_average ? m.vote_average.toFixed(1) : null,
+    };
+}
+
+function mapTv(t) {
+    return {
+        nb: `tv:${t.id}`, id: `tv:${t.id}`,
+        en_title: t.name, ar_title: t.name, title: t.name,
+        year: (t.first_air_date || '').slice(0, 4) || null,
+        kind: "2",
+        imgMediumThumbObjUrl: tmdbImg(t.poster_path, 'w342'),
+        imgObjUrl: tmdbImg(t.poster_path, 'w780'),
+        ar_content: t.overview, en_content: t.overview,
+        stars: t.vote_average ? t.vote_average.toFixed(1) : null,
+    };
+}
+
+function parseContentId(id) {
+    const parts = String(id).split(':');
+    return { type: parts[0], tmdbId: parts[1] };
+}
+
+app.get('/api/content/groups', async (req, res) => {
+    try {
+        const [trending, popularMovies, popularTv, topRated] = await Promise.all([
+            tmdbGet('/trending/all/week'),
+            tmdbGet('/movie/popular'),
+            tmdbGet('/tv/popular'),
+            tmdbGet('/movie/top_rated'),
+        ]);
+        const groups = [
+            {
+                title: "الأكثر رواجاً",
+                content: (trending.results || [])
+                    .filter(i => i.media_type === 'movie' || i.media_type === 'tv')
+                    .map(i => i.media_type === 'tv' ? mapTv(i) : mapMovie(i)),
+            },
+            { title: "أفلام شائعة", content: (popularMovies.results || []).map(mapMovie) },
+            { title: "مسلسلات شائعة", content: (popularTv.results || []).map(mapTv) },
+            { title: "الأعلى تقييماً", content: (topRated.results || []).map(mapMovie) },
+        ];
+        res.json({ groups });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
-}));
+});
 
-// ==========================================
-// 5. البروكسي القديم (باقي الطلبات مثل الصور والفيديو)
-// ==========================================
-const targets = {
-    '/api/cinemana': 'https://cinemana.shabakaty.com', // يبقى للرجوع الخلفي لو أردت
-    '/api/rating': 'https://rating.shabakaty.com',
-    '/api/thumbnail': 'https://thumbnail.shabakaty.com',
-    '/api/recommend': 'https://recommend.shabakaty.com',
-    '/api/cdn': 'https://cdn.shabakaty.com'
-};
-
-Object.entries(targets).forEach(([pathPrefix, targetUrl]) => {
-    app.use(pathPrefix, createProxyMiddleware({
-        target: targetUrl,
-        changeOrigin: true,
-        pathRewrite: { [`^${pathPrefix}`]: '' },
-        onProxyReq: (proxyReq, req, res) => {
-            proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-            if (targetUrl.includes('shabakaty')) {
-                proxyReq.setHeader('Origin', targetUrl);
-                proxyReq.setHeader('Referer', `${targetUrl}/`);
-            }
-        },
-        onError: (err, req, res) => {
-            console.error(`Proxy Error:`, err.message);
-            res.status(500).json({ error: 'Proxy failed', details: err.message });
+app.get('/api/content/search', async (req, res) => {
+    try {
+        const { query, type } = req.query;
+        if (!query) return res.json([]);
+        if (type === 'series') {
+            const data = await tmdbGet('/search/tv', { query });
+            return res.json((data.results || []).map(mapTv));
         }
-    }));
+        const data = await tmdbGet('/search/movie', { query });
+        res.json((data.results || []).map(mapMovie));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/content/details/:id', async (req, res) => {
+    try {
+        const { type, tmdbId } = parseContentId(req.params.id);
+        const isTv = type === 'tv';
+        const [details, credits] = await Promise.all([
+            tmdbGet(`/${isTv ? 'tv' : 'movie'}/${tmdbId}`),
+            tmdbGet(`/${isTv ? 'tv' : 'movie'}/${tmdbId}/credits`),
+        ]);
+        const mapped = isTv ? mapTv(details) : mapMovie(details);
+        mapped.categories = (details.genres || []).map(g => ({ en_title: g.name, ar_title: g.name }));
+        mapped.actorsInfo = (credits.cast || []).slice(0, 15).map(c => ({
+            nb: String(c.id), name: c.name, staff_img: tmdbImg(c.profile_path, 'w185'),
+        }));
+        res.json(mapped);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/content/episodes/:tvId', async (req, res) => {
+    try {
+        const tvId = req.params.tvId;
+        const tvDetails = await tmdbGet(`/tv/${tvId}`);
+        const seasonNumbers = (tvDetails.seasons || [])
+            .map(s => s.season_number)
+            .filter(n => n > 0); // تجاهل "المواسم الخاصة" (season 0)
+
+        const seasonResults = await Promise.all(
+            seasonNumbers.map(n => tmdbGet(`/tv/${tvId}/season/${n}`).catch(() => null))
+        );
+
+        const episodes = [];
+        seasonResults.forEach(season => {
+            if (!season || !season.episodes) return;
+            season.episodes.forEach(ep => {
+                episodes.push({
+                    nb: `tv:${tvId}:${ep.season_number}:${ep.episode_number}`,
+                    id: `tv:${tvId}:${ep.season_number}:${ep.episode_number}`,
+                    season: String(ep.season_number),
+                    episodeNummer: String(ep.episode_number),
+                    en_title: ep.name, ar_title: ep.name, title: ep.name,
+                    imgMediumThumbObjUrl: tmdbImg(ep.still_path, 'w300') || tmdbImg(tvDetails.poster_path, 'w342'),
+                });
+            });
+        });
+        res.json(episodes);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.get('/', (req, res) => {
-    res.send({ status: 'VPS Server (Auth + Secure Proxy) is running', timestamp: new Date() });
+    res.send({ status: 'VPS Server (Auth + TMDB Content API) is running', timestamp: new Date() });
 });
 
 const PORT = 8080;

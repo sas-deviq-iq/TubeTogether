@@ -24,7 +24,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.tubetogether.api.RetrofitClient
-import com.example.tubetogether.api.StreamSourceResponse
 import com.example.tubetogether.api.VideoResponse
 import com.example.tubetogether.data.LocalDataManager
 import kotlinx.coroutines.launch
@@ -32,14 +31,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailsScreen(videoId: String, onPlayVideo: (String) -> Unit, onBack: () -> Unit) {
     var details by remember { mutableStateOf<VideoResponse?>(null) }
-    var streamSources by remember { mutableStateOf<List<StreamSourceResponse>>(emptyList()) }
     var episodes by remember { mutableStateOf<List<VideoResponse>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    
+
     // For series
     var selectedSeason by remember { mutableStateOf("1") }
-    var isEpisodeLoading by remember { mutableStateOf<String?>(null) }
     var isFavorite by remember { mutableStateOf(LocalDataManager.isFavorite(videoId)) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -47,33 +44,14 @@ fun DetailsScreen(videoId: String, onPlayVideo: (String) -> Unit, onBack: () -> 
     LaunchedEffect(videoId) {
         coroutineScope.launch {
             try {
-                var videoDetails: com.example.tubetogether.api.VideoResponse? = null
-                try {
-                    videoDetails = RetrofitClient.api.getVideoDetails(videoId)
-                } catch (e: retrofit2.HttpException) {
-                    if (e.code() == 400) {
-                        // Fallback: sometimes allVideoInfo throws 400 for certain valid IDs.
-                        // We can fetch its details via AdvancedSearch by ID.
-                        videoDetails = RetrofitClient.api.searchVideosByNb(videoId).find { it.nb == videoId }
-                    } else {
-                        throw e
-                    }
-                }
-                
-                if (videoDetails == null) {
-                    throw Exception("Video not found or removed from server")
-                }
-                
+                val videoDetails = RetrofitClient.api.getVideoDetails(videoId)
                 details = videoDetails
-                
+
                 if (videoDetails.kind == "2") {
                     // It's a series
                     episodes = RetrofitClient.api.getSeriesEpisodes(videoId)
                     val minSeason = episodes.mapNotNull { it.season?.toIntOrNull() }.minOrNull()?.toString()
                     selectedSeason = minSeason ?: "1"
-                } else {
-                    // It's a movie
-                    streamSources = RetrofitClient.api.getStreamSources(videoId)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -248,22 +226,8 @@ fun DetailsScreen(videoId: String, onPlayVideo: (String) -> Unit, onBack: () -> 
                                             .fillMaxWidth()
                                             .padding(vertical = 4.dp)
                                             .clickable {
-                                                if (isEpisodeLoading != null) return@clickable
                                                 val epId = episode.nb ?: return@clickable
-                                                isEpisodeLoading = epId
-                                                
-                                                coroutineScope.launch {
-                                                    try {
-                                                        val sources = RetrofitClient.api.getStreamSources(epId)
-                                                        if (sources.isNotEmpty()) {
-                                                            onPlayVideo(epId)
-                                                        }
-                                                    } catch (e: Exception) {
-                                                        e.printStackTrace()
-                                                    } finally {
-                                                        isEpisodeLoading = null
-                                                    }
-                                                }
+                                                onPlayVideo(epId)
                                             },
                                         colors = CardDefaults.cardColors(containerColor = Color(0xFF222222))
                                     ) {
@@ -281,15 +245,8 @@ fun DetailsScreen(videoId: String, onPlayVideo: (String) -> Unit, onBack: () -> 
                                                         modifier = Modifier.fillMaxSize()
                                                     )
                                                 }
-                                                if (isEpisodeLoading == episode.nb) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.align(Alignment.Center).size(24.dp),
-                                                        color = Color.Red,
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                }
-                                                
-                                                val progress = remember(episode.nb) { 
+
+                                                val progress = remember(episode.nb) {
                                                     episode.nb?.let { LocalDataManager.getWatchProgressV2(it) } 
                                                 }
                                                 if (progress != null && progress.durationMs > 0 && progress.positionMs > 0) {
@@ -328,31 +285,23 @@ fun DetailsScreen(videoId: String, onPlayVideo: (String) -> Unit, onBack: () -> 
                             }
                         } else {
                             // Movie UI
-                            if (streamSources.isNotEmpty()) {
-                                val savedProgress = LocalDataManager.getWatchProgress(videoId)
-                                val hasProgress = savedProgress > 0L
-                                
-                                Button(
-                                    onClick = { 
-                                        if (streamSources.isNotEmpty()) {
-                                            onPlayVideo(videoId)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(50.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (hasProgress) Color(0xFFE50914) else Color.White, 
-                                        contentColor = if (hasProgress) Color.White else Color.Black
-                                    ),
-                                    shape = RoundedCornerShape(4.dp)
-                                ) {
-                                    Text("▶", fontWeight = FontWeight.Bold)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(if (hasProgress) "إكمال المشاهدة" else "تشغيل", fontWeight = FontWeight.Bold)
-                                }
-                            } else {
-                                Text("لا يوجد روابط مشاهدة", color = Color.Red)
+                            val savedProgress = LocalDataManager.getWatchProgress(videoId)
+                            val hasProgress = savedProgress > 0L
+
+                            Button(
+                                onClick = { onPlayVideo(videoId) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (hasProgress) Color(0xFFE50914) else Color.White,
+                                    contentColor = if (hasProgress) Color.White else Color.Black
+                                ),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text("▶", fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(if (hasProgress) "إكمال المشاهدة" else "تشغيل", fontWeight = FontWeight.Bold)
                             }
                         }
 

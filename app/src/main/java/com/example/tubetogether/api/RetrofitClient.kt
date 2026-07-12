@@ -7,8 +7,8 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    // Main API endpoint configuration
-    private val BASE_URL = "http://158.220.120.204:8080/api/cinemana/"
+    // Main API endpoint configuration (TMDB-backed content API)
+    private val BASE_URL = "http://158.220.120.204:8080/api/content/"
 
     private val okHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
