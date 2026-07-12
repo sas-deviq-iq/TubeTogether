@@ -1,6 +1,6 @@
 {
-  "version": "1.3.2",
-  "versionCode": 8,
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.2/app-debug.apk",
-  "releaseNotes": "- إضافة شاشة الملف الشخصي الإجبارية لتحديد الاسم، واسم المستخدم، وتاريخ الميلاد، والبلد."
+  "version": "1.3.3",
+  "versionCode": 9,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.3/app-debug.apk",
+  "releaseNotes": "- إصلاح نهائي لمشكلة التحديث المستمر ومشاكل الاتصال بالسيرفر."
 }
