@@ -1,6 +1,6 @@
 {
-  "version": "1.2.0",
-  "versionCode": 5,
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/latest/download/app-debug.apk",
-  "releaseNotes": "- إضافة نظام الحسابات وتسجيل الدخول.\n- تصميم جديد كلياً لشاشة تسجيل الدخول.\n- دعم المصادقة وبناء سيرفر قاعدة بيانات مستقل."
+  "version": "1.3.0",
+  "versionCode": 6,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.3.0/app-debug.apk",
+  "releaseNotes": "- جدار حماية (Firewall) جديد.\n- تشفير عسكري للبيانات والروابط (AES-256).\n- منع تشغيل التطبيق في النسخ القديمة لتعزيز الحماية."
 }
