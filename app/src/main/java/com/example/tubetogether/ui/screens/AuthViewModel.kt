@@ -1,11 +1,14 @@
 package com.example.tubetogether.ui.screens
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tubetogether.api.TubeApi
 import com.example.tubetogether.api.auth.AuthApi
+import com.example.tubetogether.api.auth.GoogleAuthRequest
 import com.example.tubetogether.api.auth.LoginRequest
 import com.example.tubetogether.api.auth.RegisterRequest
+import com.example.tubetogether.api.auth.CompleteProfileRequest
 import com.example.tubetogether.auth.AuthManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +46,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = authApi.login(LoginRequest(email, password))
-                AuthManager.saveSession(response.token, response.user.name, response.user.email)
+                AuthManager.saveSession(response.token, response.user.name, response.user.email, response.user.profile_complete)
                 _authState.value = AuthState.Success(response.user.name)
                 onSuccess()
             } catch (e: Exception) {
@@ -63,7 +66,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val response = authApi.register(RegisterRequest(name, email, password))
-                AuthManager.saveSession(response.token, response.user.name, response.user.email)
+                AuthManager.saveSession(response.token, response.user.name, response.user.email, response.user.profile_complete)
                 _authState.value = AuthState.Success(response.user.name)
                 onSuccess()
             } catch (e: Exception) {
@@ -72,7 +75,43 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // Google Auth will be implemented later once we add CredentialManager
+    fun googleSignIn(context: Context, idToken: String, onSuccess: () -> Unit) {
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val response = authApi.googleAuth(GoogleAuthRequest(idToken))
+                AuthManager.saveSession(response.token, response.user.name, response.user.email, response.user.profile_complete)
+                _authState.value = AuthState.Success(response.user.name)
+                onSuccess()
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error("فشل تسجيل الدخول بحساب جوجل")
+            }
+        }
+    }
+    
+    fun completeProfile(name: String, username: String, dob: String, country: String, onSuccess: () -> Unit) {
+        if (name.isBlank() || username.isBlank() || dob.isBlank() || country.isBlank()) {
+            _authState.value = AuthState.Error("جميع الحقول مطلوبة")
+            return
+        }
+        
+        _authState.value = AuthState.Loading
+        viewModelScope.launch {
+            try {
+                val token = AuthManager.getToken() ?: return@launch
+                val response = authApi.completeProfile("Bearer $token", CompleteProfileRequest(name, username, dob, country))
+                if (response.success) {
+                    AuthManager.setProfileComplete()
+                    _authState.value = AuthState.Success(name)
+                    onSuccess()
+                } else {
+                    _authState.value = AuthState.Error("حدث خطأ أثناء حفظ البيانات")
+                }
+            } catch (e: Exception) {
+                _authState.value = AuthState.Error(if (e.message?.contains("400") == true) "اسم المستخدم هذا محجوز مسبقاً" else "حدث خطأ في الاتصال بالسيرفر")
+            }
+        }
+    }
     
     fun resetState() {
         _authState.value = AuthState.Idle

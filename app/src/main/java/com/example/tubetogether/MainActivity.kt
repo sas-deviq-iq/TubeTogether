@@ -215,13 +215,28 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val startDest = if (com.example.tubetogether.auth.AuthManager.isLoggedIn()) "home" else "auth"
+                        val startDest = if (com.example.tubetogether.auth.AuthManager.isLoggedIn()) {
+                            if (com.example.tubetogether.auth.AuthManager.isProfileComplete()) "home" else "complete_profile"
+                        } else {
+                            "auth"
+                        }
+                        
                         NavHost(navController = navController, startDestination = startDest) {
                             composable("auth") {
                                 com.example.tubetogether.ui.screens.AuthScreen(
                                     onLoginSuccess = {
-                                        navController.navigate("home") {
+                                        val destination = if (com.example.tubetogether.auth.AuthManager.isProfileComplete()) "home" else "complete_profile"
+                                        navController.navigate(destination) {
                                             popUpTo("auth") { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
+                            composable("complete_profile") {
+                                com.example.tubetogether.ui.screens.CompleteProfileScreen(
+                                    onCompleteSuccess = {
+                                        navController.navigate("home") {
+                                            popUpTo("complete_profile") { inclusive = true }
                                         }
                                     }
                                 )
