@@ -141,8 +141,29 @@ fun PlayerScreen(playId: String, onBack: () -> Unit) {
                             "AndroidBridge"
                         )
 
-                        webChromeClient = WebChromeClient()
+                        webChromeClient = object : WebChromeClient() {
+                            // Ad networks embedded in the player try to pop up new windows
+                            // (gambling/ad redirects) via window.open() - refuse them outright.
+                            override fun onCreateWindow(
+                                view: WebView?,
+                                isDialog: Boolean,
+                                isUserGesture: Boolean,
+                                resultMsg: android.os.Message?
+                            ): Boolean = false
+                        }
                         webViewClient = object : WebViewClient() {
+                            // Same ad networks also try to hijack the page itself into
+                            // navigating to ad/gambling sites - only allow staying on vidking.net.
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?
+                            ): Boolean {
+                                val uri = request?.url ?: return true
+                                val isAllowed = (uri.scheme == "http" || uri.scheme == "https") &&
+                                    uri.host?.endsWith("vidking.net") == true
+                                return !isAllowed
+                            }
+
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 isLoading = false

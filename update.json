@@ -1,6 +1,6 @@
 {
-  "version": "1.4.0",
-  "versionCode": 11,
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.4.0/app-debug.apk",
-  "releaseNotes": "- تغيير كامل لمصدر الأفلام والمسلسلات إلى TMDB (بيانات أدق وأسرع، ويحل مشكلة توقف تحميل الرئيسية).\n- مشغل فيديو جديد مع دعم استكمال المشاهدة من حيث توقفت."
+  "version": "1.4.1",
+  "versionCode": 12,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.4.1/app-debug.apk",
+  "releaseNotes": "- حظر إعلانات وروابط القمار التي كانت تفتح تلقائياً أثناء مشاهدة الأفلام."
 }
