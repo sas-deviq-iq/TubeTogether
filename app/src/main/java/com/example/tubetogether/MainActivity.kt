@@ -46,8 +46,8 @@ import okhttp3.OkHttpClient
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.tubetogether.auth.AuthManager.init(applicationContext)
         LocalDataManager.init(applicationContext)
-        
         // Setup Coil to hit CDNs directly to prevent slow image loading
         val imageLoader = ImageLoader.Builder(applicationContext)
             .okHttpClient {
@@ -215,7 +215,17 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        NavHost(navController = navController, startDestination = "home") {
+                        val startDest = if (com.example.tubetogether.auth.AuthManager.isLoggedIn()) "home" else "auth"
+                        NavHost(navController = navController, startDestination = startDest) {
+                            composable("auth") {
+                                com.example.tubetogether.ui.screens.AuthScreen(
+                                    onLoginSuccess = {
+                                        navController.navigate("home") {
+                                            popUpTo("auth") { inclusive = true }
+                                        }
+                                    }
+                                )
+                            }
                             composable("home") {
                                 HomeScreen(onVideoClick = { videoId ->
                                     if (videoId == "SEE_ALL_CATEGORY") {

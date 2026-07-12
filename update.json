@@ -1,5 +1,6 @@
 {
-  "version": "1.1.2",
-  "releaseNotes": "🛡️ **Critical Update (v1.1.2):**\n- Fixed an issue where the proxy fallback was sending duplicate API paths (api/android/api/android/) resulting in empty screens.\n- Seamless direct connection to Shabakaty is now fully operational when the proxy is offline.",
-  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/download/v1.1.2/TubeTogether-v1.1.2.apk"
+  "version": "1.2.0",
+  "versionCode": 5,
+  "downloadUrl": "https://github.com/sas-deviq-iq/TubeTogether/releases/latest/download/app-debug.apk",
+  "releaseNotes": "- إضافة نظام الحسابات وتسجيل الدخول.\n- تصميم جديد كلياً لشاشة تسجيل الدخول.\n- دعم المصادقة وبناء سيرفر قاعدة بيانات مستقل."
 }
